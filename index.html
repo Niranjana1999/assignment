@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <title>Homework #2: D3 Linking - CSE 578 - Fall 2023</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        svg {
+            width: 580px;
+            height: 400px;
+            background-color: white;
+            border: 1px solid #D3D3D3;
+            border-radius: 3px;
+        }
+
+        .myContainer {
+            margin: auto;
+            width: 1210px;
+        }
+
+        #bar_div,
+        #pie_div {
+            float: left;
+            width: 600px;
+            padding: 10px;
+        }
+
+        #bar_div {
+            float: right;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: #fff;
+            border: 2px solid #000;
+            border-radius: 5px;
+            padding: 5px;
+            font-size: 12px;
+            z-index: 9999;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="myContainer">
+        <h1 class="text-center">Homework #2: D3 Linking</h1>
+        <h3 class="text-center">Niranjana Suresh - nsures15@asu.edu</h3>
+        <hr>
+        <form class="border border-dark rounded p-2 mb-2 bg-light shadow-sm" onsubmit="return false;">
+            <label for="wordbox">Enter text here</label>
+            <textarea class="form-control mb-2 mt-1" id="wordbox" rows="8"></textarea>
+            <button id="submit_button" style="display: block; margin-top: 10px;">Submit text</button>
+        </form>
+        <div id="pie_div" class="border border-dark rounded bg-light shadow-sm">
+            Distribution of characters
+            <svg id="pie_svg"></svg>
+        </div>
+        <div id="bar_div" class="border border-dark rounded bg-light shadow-sm">
+            Count for selected character is <span id="character-name">NONE</span>.
+            <svg id="bar_svg"></svg>
+        </div>
+    </div>
+    <script>
+        // Get references to HTML elements
+        const textarea = document.getElementById('wordbox');
+        const submitButton = document.getElementById('submit_button');
+        const pieSvg = document.getElementById('pie_svg');
+        const barSvg = document.getElementById('bar_svg');
+        const characterName = document.getElementById('character-name');
+
+        // Add an event listener to the Submit button
+        submitButton.addEventListener('click', () => {
+            // Read the text from the textarea
+            const enteredText = textarea.value;
+
+            // Calculate character distributions (vowels, consonants, punctuation)
+            const charDistribution = calculateCharacterDistribution(enteredText);
+
+            // Create or update the donut chart
+            createDonutChart(charDistribution, pieSvg);
+
+            // Clear the selected character count
+            characterName.textContent = 'NONE';
+        });
+
+        // Function to calculate character distribution
+        function calculateCharacterDistribution(text) {
+            // Initialize character counts
+            let vowels = 0;
+            let consonants = 0;
+            let punctuation = 0;
+
+            // Define patterns for vowels, consonants, and punctuation
+            const vowelPattern = /[aeiou]/gi;
+            const consonantPattern = /[bcdfghjklmnpqrstvwxyz]/gi;
+            const punctuationPattern = /[.,!?;:]/g;
+
+            // Count characters based on patterns
+            vowels = (text.match(vowelPattern) || []).length;
+            consonants = (text.match(consonantPattern) || []).length;
+            punctuation = (text.match(punctuationPattern) || []).length;
+            
+// Function to count characters based on patterns
+    function countCharacters(pattern, targetObject) {
+        const matches = text.match(pattern);
+
+        if (matches) {
+            matches.forEach(char => {
+                if (targetObject[char]) {
+                    targetObject[char]++;
+                } else {
+                    targetObject[char] = 1;
+                }
+            });
+        }
+    }
+    // Count characters based on patterns
+    countCharacters(vowelPattern, vowels);
+    countCharacters(consonantPattern, consonants);
+    countCharacters(punctuationPattern, punctuation);
+            
+
+        //    {"Vowels" : {} , "Consonants" : {}, "Punctuation": {}}, 
+
+            return {
+                vowels: vowels,
+                consonants: consonants,
+                punctuation: punctuation,
+            };
+        }
+
+        // Function to create the donut chart
+        function createDonutChart(charDistribution, svgElement) {
+            // Remove any existing SVG elements
+            d3.select(svgElement).selectAll('*').remove();
+
+            // Define data for the donut chart
+            const data = [
+                { label: 'Vowels', counts: charDistribution.vowels},
+                { label: 'Consonants', counts: charDistribution.consonants },
+                { label: 'Punctuation', counts: charDistribution.punctuation },
+            ];
+
+            // Define dimensions for the SVG and the donut chart
+            const width = 310;
+            const height = 310;
+            const radius = Math.min(width, height) / 2;
+            const innerRadius = radius * 0.6; // Adjust the inner radius as needed
+
+            // Set up the SVG container for the donut chart
+            const svg = d3.select(svgElement)
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width / 2 + 120},${height / 2 + 50})`);
+
+            // Create a color scale
+            const color = d3.scaleOrdinal()
+                .domain(data.map(d => d.label))
+                .range(["rgb(255, 255, 229)", "rgb(120, 197, 120)", "rgb(0, 69, 41)"]); // Specify colors
+
+            // Generate the donut chart arcs
+            const pie = d3.pie().value(d => d.counts);
+            const arcs = pie(data);
+
+            // Define arc properties
+            const arc = d3.arc()
+                .innerRadius(innerRadius)
+                .outerRadius(radius);
+
+            // Create and append arcs
+            svg.selectAll('path')
+                .data(arcs)
+                .enter()
+                .append('path')
+                .attr('d', arc)
+                .attr('fill', d => color(d.data.label))
+                .attr('stroke', '#000') // Border color
+                .attr('stroke-width', 1) // Border thickness
+                .on('mouseover', function (event, d) {
+                    // Mouseover event handler
+                    d3.select(this)
+                        .attr('stroke-width', 4); // Increase border thickness
+
+                    // Clear the selected character count when mouseout occurs
+                    d3.select(this)
+                        .on('mouseout', function () {
+                            d3.select(this)
+                                .attr('stroke-width', 1); // Restore border thickness
+                            // Remove the displayed character count
+                            svg.selectAll('text').remove();
+                        }).on;
+
+                    // Display the character count inside the donut
+                    svg.append('text')
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '10px') // Adjust font size
+                        .attr('fill', 'black') // Text color
+                        .text(`${d.data.label}: ${d.data.counts.toFixed(2)}%`)
+                        .attr('dy', '0.35em'); // Adjust vertical positioning
+                }).on("click",function(d,i){
+                    // Create or update the bar chart
+                    console.log("d:",d);
+                    console.log("i:",i);
+                    // global_var_all-stats[i.data.label]
+                    if(i.data.label==="Consonants")
+                    createBarChart(data[1].counts, color(i.label));
+                    else if(i.data.label==="Vowels")
+                    createBarChart(data[0].counts, color(i.label));
+                    else
+                    createBarChart(data[2].counts, color(i.label));
+                });
+        }
+
+        // Function to create the bar chart
+        function createBarChart(charData, color) {
+            // Remove any existing SVG elements
+            d3.select(".inner-bar-svg").selectAll('*').remove();
+
+            // // Define an array to store character counts for 'a' to 'z'
+            // const charCounts = new Array(26).fill(0);
+
+            // // Count characters from 'a' to 'z' in the text
+            // const lowercaseText = text.toLowerCase();
+            // for (let i = 0; i < lowercaseText.length; i++) {
+            //     const char = lowercaseText.charAt(i);
+            //     if (char >= 'a' && char <= 'z') {
+            //         charCounts[char.charCodeAt(0) - 'a'.charCodeAt(0)]++;
+            //     }
+            // }
+
+            // Set up the SVG container for the bar chart
+            const svg = d3.select("#bar_svg");
+            const width= +svg.style("width").replace("px","");
+            const height = +svg.style("height").replace("px","");
+
+            const margin = { top: 20, bottom: 20, left: 20, right: 20 }
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+
+            innerBarSvg = svg.append("g").attr("class", "inner-bar-svg").attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Create the bar chart and position it
+            const xScale = d3.scaleBand()
+                .domain(Object.keys(charData)) //Object.keys(YOUR_INDIVIDUAL_OBJECT_NAME)
+                .range([0, innerWidth])
+                .padding(0.1);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(Object.values(charData))])
+                .range([innerHeight, 0]); // Reverse the range to start from the top
+
+
+            const tooltip = d3.select('body')
+                .append('div')
+                .attr('class', 'tooltip');
+
+            innerBarSvg.selectAll('rect')
+                .data(Object.entries(charData)) //Object.entries(YOUR_PARAMETER eg vowels object)
+                .enter()
+                .append('rect')
+                .attr('x', (d, i) => xScale(d[0]))
+                .attr('y', d => yScale(d[1])) // Reverse the y position
+                .attr('width', xScale.bandwidth())
+                .attr('height', d => yScale(0) - yScale(d[1])) // Reverse the height
+                .attr('fill', 'rgb(120, 197, 120)').on('mouseover', function (event, d) {
+                    // Show tooltip
+                    tooltip
+                        .html(`Character: ${d[0]}<br>Count: ${d[1]}`)
+                        .style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 15) + 'px').style("display","inline-block");
+
+                    // Update interactive label
+                    characterName.textContent = `${d[1]}.`;
+                })
+                .on('mousemove', function (event) {
+                    // Move tooltip with mouse
+                    tooltip.style('left', (event.pageX + 10) + 'px')
+                        .style('top', (event.pageY - 15) + 'px');
+                })
+                .on('mouseout', function () {
+                    // Hide tooltip
+                    tooltip.style('display', 'none');
+
+                    // Reset interactive label
+                    characterName.textContent = 'NONE';
+                });; // Light yellow color
+
+            // Create separate SVG containers for x-axis and y-axis labels
+            const xAxis = d3.axisBottom(xScale);
+            const xAxisSvg = innerBarSvg.append('g')
+                .attr('transform', `translate(0,${innerHeight})`).call(xAxis);
+            const yAxis = d3.axisLeft(yScale);
+            const yAxisSvg = innerBarSvg.append('g').call(yAxis);
+
+            // Define x-axis and y-axis labels
+            const xAxisLabel = "Characters (a to z)";
+            const yAxisLabel = "Count";
+
+            // Append x-axis and y-axis labels
+            xAxisSvg.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('x', width / 2)
+                .attr('y', 30) // Adjust position below the x-axis
+                .text(xAxisLabel);
+
+            yAxisSvg.append('text')
+                .attr('text-anchor', 'middle')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -height / 2)
+                .attr('y', -30) // Adjust position to the left of the y-axis
+                .text(yAxisLabel);
+
+            // // Function to compute character counts based on the selected arc
+            // function computeCharCounts(label, text) {
+            //     let pattern;
+            //     switch (label) {
+            //         case 'Vowels':
+            //             pattern = /[aeiou]/gi;
+            //             break;
+            //         case 'Consonants':
+            //             pattern = /[bcdfghjklmnpqrstvwxyz]/gi;
+            //             break;
+            //         case 'Punctuation':
+            //             pattern = /[.,!?;:]/g;
+            //             break;
+            //         default:
+            //             pattern = /./g; // Match any character
+            //     }
+
+            //     const matches = text.match(pattern);
+            //     const charCounts = {};
+
+            //     if (matches) {
+            //         matches.forEach(char => {
+            //             if (charCounts[char]) {
+            //                 charCounts[char]++;
+            //             } else {
+            //                 charCounts[char] = 1;
+            //             }
+            //         });
+            //     }
+
+            //     return Object.keys(charCounts).map(char => ({ char, count: charCounts[char] }));
+            // }
+        }
+    </script>
+</body>
+
+</html>
